@@ -8,9 +8,8 @@ import axios from 'axios';
 const RINGG_API_BASE_URL = 'https://prod-api.ringg.ai/ca/api/v0';
 const RINGG_API_KEY = process.env.RINGG_API_KEY || 'eb1f8fa4-f149-4f40-9ca2-323037e80311';
 const RINGG_AGENT_ID = process.env.RINGG_AGENT_ID_OUTBOUND || process.env.RINGG_AGENT_ID || '7fbc224c-8efe-4a21-a01f-e6f5117f0672';
-// RINGG_FROM_NUMBER: Only set if you have a valid registered phone number with Ringg AI
-// If not set, we'll omit from_number and let Ringg AI use their default
-const RINGG_FROM_NUMBER = process.env.RINGG_FROM_NUMBER;
+// RINGG_FROM_NUMBER: Default to provided number, can be overridden via environment variable
+const RINGG_FROM_NUMBER = process.env.RINGG_FROM_NUMBER || '+918035736726';
 
 export interface OutboundCallParams {
   name: string;
@@ -62,13 +61,15 @@ export async function initiateOutboundCall(params: OutboundCallParams): Promise<
     agent_id: params.agent_id || RINGG_AGENT_ID
   };
 
-  // Only include from_number if explicitly provided
-  // If not provided, omit it and let Ringg AI use their default
+  // Always include from_number (required by Ringg AI)
+  // Use provided from_number, or fall back to default
   const fromNumber = params.from_number || RINGG_FROM_NUMBER;
   if (fromNumber && fromNumber.trim() !== '') {
     requestBody.from_number = fromNumber.trim();
+  } else {
+    // If no from_number is available, use the default
+    requestBody.from_number = RINGG_FROM_NUMBER;
   }
-  // Otherwise, Ringg AI will use their default from_number
 
   // Only include custom_args_values if provided and not empty
   if (params.custom_args_values && Object.keys(params.custom_args_values).length > 0) {

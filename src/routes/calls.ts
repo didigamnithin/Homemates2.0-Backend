@@ -134,7 +134,7 @@ callsRouter.post('/outbound', async (req: AuthRequest, res, next) => {
     }
 
     // Build call parameters
-    // from_number is optional - if not provided, Ringg AI will use their default
+    // from_number is required by Ringg AI - will use default if not provided
     const callParams: any = {
       name: name.trim(),
       mobile_number: formattedNumber,
@@ -143,11 +143,11 @@ callsRouter.post('/outbound', async (req: AuthRequest, res, next) => {
       call_config
     };
     
-    // Only include from_number if explicitly provided
-    // If not provided, omit it and let Ringg AI use their default
+    // Include from_number if provided, otherwise service will use default
     if (from_number && from_number.trim() !== '') {
       callParams.from_number = from_number.trim();
     }
+    // If not provided, the service will use the default from_number (+918035736726)
 
     const callResponse = await initiateOutboundCall(callParams);
 

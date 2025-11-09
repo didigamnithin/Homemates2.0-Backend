@@ -28,101 +28,99 @@ leadsRouter.get('/', async (req: AuthRequest, res, next) => {
       ownerProperties = await csvStorage.getProperties();
     }
     
-    // Convert tenants to leads format with matching
-    const leads = await Promise.all(
-      tenants.map(async (tenant) => {
-        // Find matching properties based on tenant requirements
-        const matchingProperties = ownerProperties.filter((prop) => {
-          let matches = 0;
-          
-          // Match locality (nearby matching)
-          if (tenant.localities && prop.locality) {
-            const tenantLocalities = tenant.localities.toLowerCase().split(',').map((l: string) => l.trim());
-            const propLocality = prop.locality.toLowerCase();
-            if (tenantLocalities.some((loc: string) => propLocality.includes(loc) || loc.includes(propLocality))) {
-              matches++;
-            }
-          }
-          
-          // Match budget (within ±20%)
-          if (tenant.budget_min && tenant.budget_max && prop.rent) {
-            const tenantMin = parseFloat(tenant.budget_min);
-            const tenantMax = parseFloat(tenant.budget_max);
-            const propRent = parseFloat(prop.rent);
-            const budgetRange = (tenantMax - tenantMin) * 0.2; // 20% range
-            if (propRent >= tenantMin - budgetRange && propRent <= tenantMax + budgetRange) {
-              matches++;
-            }
-          }
-          
-          // Match bedrooms
-          if (tenant.bedrooms && prop.bedrooms) {
-            if (tenant.bedrooms === prop.bedrooms) {
-              matches++;
-            }
-          }
-          
-          // Match amenities (if any amenity matches)
-          if (tenant.amenities && prop.amenities) {
-            const tenantAmenities = tenant.amenities.toLowerCase().split(',').map((a: string) => a.trim());
-            const propAmenities = prop.amenities.toLowerCase().split(',').map((a: string) => a.trim());
-            if (tenantAmenities.some((amenity: string) => propAmenities.includes(amenity))) {
-              matches++;
-            }
-          }
-          
-          // Return true if at least one match (relaxed matching)
-          return matches > 0;
-        });
+    // Convert tenants to leads format (show all leads regardless of matching)
+    const leads = tenants.map((tenant) => {
+      // Find matching properties based on tenant requirements (for display only)
+      const matchingProperties = ownerProperties.filter((prop) => {
+        let matches = 0;
         
-        // Calculate match score (percentage of matching criteria)
-        const matchScore = matchingProperties.length > 0 
-          ? Math.min(0.9, 0.5 + (matchingProperties.length * 0.1))
-          : 0.3;
+        // Match locality (nearby matching)
+        if (tenant.localities && prop.locality) {
+          const tenantLocalities = tenant.localities.toLowerCase().split(',').map((l: string) => l.trim());
+          const propLocality = prop.locality.toLowerCase();
+          if (tenantLocalities.some((loc: string) => propLocality.includes(loc) || loc.includes(propLocality))) {
+            matches++;
+          }
+        }
         
-        // Get the best matching property
-        const bestMatch = matchingProperties[0] || null;
+        // Match budget (within ±20%)
+        if (tenant.budget_min && tenant.budget_max && prop.rent) {
+          const tenantMin = parseFloat(tenant.budget_min);
+          const tenantMax = parseFloat(tenant.budget_max);
+          const propRent = parseFloat(prop.rent);
+          const budgetRange = (tenantMax - tenantMin) * 0.2; // 20% range
+          if (propRent >= tenantMin - budgetRange && propRent <= tenantMax + budgetRange) {
+            matches++;
+          }
+        }
         
-        return {
-          lead_id: tenant.tenant_id || `lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        // Match bedrooms
+        if (tenant.bedrooms && prop.bedrooms) {
+          if (tenant.bedrooms === prop.bedrooms) {
+            matches++;
+          }
+        }
+        
+        // Match amenities (if any amenity matches)
+        if (tenant.amenities && prop.amenities) {
+          const tenantAmenities = tenant.amenities.toLowerCase().split(',').map((a: string) => a.trim());
+          const propAmenities = prop.amenities.toLowerCase().split(',').map((a: string) => a.trim());
+          if (tenantAmenities.some((amenity: string) => propAmenities.includes(amenity))) {
+            matches++;
+          }
+        }
+        
+        // Return true if at least one match (relaxed matching)
+        return matches > 0;
+      });
+      
+      // Calculate match score (percentage of matching criteria)
+      const matchScore = matchingProperties.length > 0 
+        ? Math.min(0.9, 0.5 + (matchingProperties.length * 0.1))
+        : 0.3;
+      
+      // Get the best matching property (if any)
+      const bestMatch = matchingProperties[0] || null;
+      
+      return {
+        lead_id: tenant.tenant_id || `lead_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        tenant_id: tenant.tenant_id,
+        property_id: bestMatch?.property_id || '',
+        property_code: bestMatch?.property_code || '',
+        channel: 'tenant_csv',
+        transcript: '',
+        call_recording_url: '',
+        match_score: matchScore.toString(),
+        status: status as string || 'new',
+        owner_notified: 'false',
+        created_at: tenant.created_at || new Date().toISOString(),
+        updated_at: tenant.updated_at || new Date().toISOString(),
+        tenant: {
           tenant_id: tenant.tenant_id,
-          property_id: bestMatch?.property_id || '',
-          property_code: bestMatch?.property_code || '',
-          channel: 'tenant_csv',
-          transcript: '',
-          call_recording_url: '',
-          match_score: matchScore.toString(),
-          status: status as string || 'new',
-          owner_notified: 'false',
-          created_at: tenant.created_at || new Date().toISOString(),
-          updated_at: tenant.updated_at || new Date().toISOString(),
-          tenant: {
-            tenant_id: tenant.tenant_id,
-            name: tenant.name,
-            phone: tenant.phone,
-            whatsapp_number: tenant.whatsapp_number,
-            email: tenant.email,
-            city: tenant.city,
-            localities: tenant.localities,
-            budget_min: tenant.budget_min,
-            budget_max: tenant.budget_max,
-            bedrooms: tenant.bedrooms,
-            amenities: tenant.amenities
-          },
-          property: bestMatch ? {
-            property_id: bestMatch.property_id,
-            property_code: bestMatch.property_code,
-            title: bestMatch.title,
-            locality: bestMatch.locality,
-            rent: bestMatch.rent,
-            bedrooms: bestMatch.bedrooms,
-            area_sqft: bestMatch.area_sqft,
-            amenities: bestMatch.amenities
-          } : null,
-          matching_properties_count: matchingProperties.length
-        };
-      })
-    );
+          name: tenant.name,
+          phone: tenant.phone,
+          whatsapp_number: tenant.whatsapp_number,
+          email: tenant.email,
+          city: tenant.city,
+          localities: tenant.localities,
+          budget_min: tenant.budget_min,
+          budget_max: tenant.budget_max,
+          bedrooms: tenant.bedrooms,
+          amenities: tenant.amenities
+        },
+        property: bestMatch ? {
+          property_id: bestMatch.property_id,
+          property_code: bestMatch.property_code,
+          title: bestMatch.title,
+          locality: bestMatch.locality,
+          rent: bestMatch.rent,
+          bedrooms: bestMatch.bedrooms,
+          area_sqft: bestMatch.area_sqft,
+          amenities: bestMatch.amenities
+        } : null,
+        matching_properties_count: matchingProperties.length
+      };
+    });
     
     // Filter by status if provided
     let filteredLeads = leads;
@@ -130,8 +128,8 @@ leadsRouter.get('/', async (req: AuthRequest, res, next) => {
       filteredLeads = leads.filter((lead) => lead.status === status);
     }
     
-    // Sort by match score (highest first)
-    filteredLeads.sort((a, b) => parseFloat(b.match_score) - parseFloat(a.match_score));
+    // Sort by created_at (newest first) - show all leads regardless of matching
+    filteredLeads.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     
     res.json({ 
       status: 'success', 

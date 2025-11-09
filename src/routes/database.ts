@@ -232,6 +232,39 @@ databaseRouter.post('/ingest', async (req: AuthRequest, res, next) => {
   }
 });
 
+// Search using Perplexity with custom query
+databaseRouter.post('/search', async (req: AuthRequest, res, next) => {
+  try {
+    const { query, max_results } = req.body;
+
+    if (!query || typeof query !== 'string' || query.trim() === '') {
+      throw createError('Search query is required', 400);
+    }
+
+    console.log('Perplexity search request:', { query, max_results });
+
+    // Search using Perplexity
+    const searchResults = await perplexityService.search(
+      query.trim(),
+      max_results || 20
+    );
+
+    console.log(`Found ${searchResults.results.length} search results`);
+    console.log(`Extracted ${searchResults.listings.length} structured listings`);
+
+    res.json({
+      status: 'success',
+      message: `Found ${searchResults.results.length} results`,
+      results: searchResults.results,
+      listings: searchResults.listings,
+      total_results: searchResults.results.length,
+      total_listings: searchResults.listings.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Helper function to convert listings to CSV
 function convertListingsToCSV(listings: any[]): string {
   if (listings.length === 0) {

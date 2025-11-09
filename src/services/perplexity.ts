@@ -36,6 +36,87 @@ export interface PerplexitySearchResult {
 }
 
 export const perplexityService = {
+  // Search with custom query
+  async search(query: string, maxResults: number = 20): Promise<{
+    results: PerplexitySearchResult[];
+    listings: ListingData[];
+  }> {
+    try {
+      const client = getClient();
+
+      console.log('Perplexity search query:', query);
+
+      // Build comprehensive query for real estate listings
+      const comprehensiveQuery = (
+        `Extract structured flat listing data for ${query} from ` +
+        `nobroker.in, housing.com, facebook.com/marketplace, makaan.com, ` +
+        `and magicbricks.com. Include for each listing: ` +
+        `project name, developer name, BHK configuration, price, area (sqft), ` +
+        `location (with latitude and longitude if available), amenities, ` +
+        `furnishing status, property type (new/resale/rental), contact number, ` +
+        `and availability date. Focus on verified listings and new launches. ` +
+        `Output should be structured as JSON data suitable for a real estate database.`
+      );
+
+      // Create search request with domain filter
+      const searchResponse = await client.search.create({
+        query: comprehensiveQuery,
+        search_domain_filter: [
+          'nobroker.in',
+          'housing.com',
+          'facebook.com',
+          'makaan.com',
+          'magicbricks.com'
+        ],
+        max_results: maxResults,
+        max_tokens_per_page: 2048
+      });
+
+      console.log('Perplexity search response:', JSON.stringify(searchResponse, null, 2));
+
+      // Extract results
+      const results: PerplexitySearchResult[] = [];
+      const listings: ListingData[] = [];
+
+      // Process search results
+      if (searchResponse.results && Array.isArray(searchResponse.results)) {
+        for (const result of searchResponse.results) {
+          // Add to results
+          results.push({
+            url: result.url || '',
+            title: result.title || '',
+            snippet: result.snippet || ''
+          });
+
+          // Try to extract structured data from snippet
+          const listing = extractListingData(result);
+          if (listing) {
+            listings.push(listing);
+          }
+        }
+      }
+
+      return {
+        results,
+        listings
+      };
+    } catch (error: any) {
+      console.error('Perplexity API Error:', error);
+      
+      // Extract detailed error message
+      let errorMessage = error.message || 'Unknown error';
+      if (error.response?.data) {
+        if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      }
+      
+      throw new Error(`Failed to search: ${errorMessage}`);
+    }
+  },
+
   // Search for real estate listings
   async searchListings(city: string = 'Hyderabad'): Promise<{
     results: PerplexitySearchResult[];
@@ -58,9 +139,16 @@ export const perplexityService = {
 
       console.log('Perplexity search query:', query);
 
-      // Create search request - using the structure from @perplexity-ai/perplexity_ai
+      // Create search request with domain filter
       const searchResponse = await client.search.create({
         query: query,
+        search_domain_filter: [
+          'nobroker.in',
+          'housing.com',
+          'facebook.com',
+          'makaan.com',
+          'magicbricks.com'
+        ],
         max_results: 20,
         max_tokens_per_page: 2048
       });

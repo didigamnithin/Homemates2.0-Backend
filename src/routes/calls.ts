@@ -133,14 +133,23 @@ callsRouter.post('/outbound', async (req: AuthRequest, res, next) => {
       throw createError('Invalid mobile number format. Must be in E.164 format (e.g., +919876543210)', 400);
     }
 
-    const callResponse = await initiateOutboundCall({
+    // Build call parameters
+    // from_number is optional - if not provided, Ringg AI will use their default
+    const callParams: any = {
       name: name.trim(),
       mobile_number: formattedNumber,
       agent_id,
-      from_number,
       custom_args_values,
       call_config
-    });
+    };
+    
+    // Only include from_number if explicitly provided
+    // If not provided, omit it and let Ringg AI use their default
+    if (from_number && from_number.trim() !== '') {
+      callParams.from_number = from_number.trim();
+    }
+
+    const callResponse = await initiateOutboundCall(callParams);
 
     res.json({
       status: 'success',

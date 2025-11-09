@@ -21,9 +21,11 @@ RUN npm run build
 # Remove dev dependencies after build
 RUN npm prune --production
 
-# Copy data files
+# Create data directories
+RUN mkdir -p data uploads database
+
+# Copy database files (database directory exists)
 COPY database/ ./database/
-RUN mkdir -p data uploads
 
 # Expose port (Cloud Run automatically sets PORT env variable)
 EXPOSE 8080

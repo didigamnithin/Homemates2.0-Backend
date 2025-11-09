@@ -22,10 +22,8 @@ RUN npm run build
 RUN npm prune --production
 
 # Create data directories
+# Note: database/ is already copied with COPY . . above
 RUN mkdir -p data uploads database
-
-# Copy database files (database directory exists)
-COPY database/ ./database/
 
 # Expose port (Cloud Run automatically sets PORT env variable)
 EXPOSE 8080

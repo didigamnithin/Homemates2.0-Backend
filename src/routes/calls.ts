@@ -108,7 +108,7 @@ callsRouter.post('/outbound', async (req: AuthRequest, res, next) => {
     if (!name || !mobile_number) {
       throw createError('Name and mobile_number are required', 400);
     }
-
+    
     // Format mobile number with country code if not present
     let formattedNumber = mobile_number.trim();
     if (!formattedNumber.startsWith('+')) {
@@ -142,7 +142,7 @@ callsRouter.post('/outbound', async (req: AuthRequest, res, next) => {
       custom_args_values,
       call_config
     };
-    
+
     // Include from_number if provided, otherwise service will use default
     if (from_number && from_number.trim() !== '') {
       callParams.from_number = from_number.trim();

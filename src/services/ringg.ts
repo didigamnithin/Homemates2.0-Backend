@@ -6,8 +6,8 @@
 import axios from 'axios';
 
 const RINGG_API_BASE_URL = 'https://prod-api.ringg.ai/ca/api/v0';
-const RINGG_API_KEY = process.env.RINGG_API_KEY || 'eb1f8fa4-f149-4f40-9ca2-323037e80311';
-const RINGG_AGENT_ID = process.env.RINGG_AGENT_ID_OUTBOUND || process.env.RINGG_AGENT_ID || '7fbc224c-8efe-4a21-a01f-e6f5117f0672';
+const RINGG_API_KEY = process.env.RINGG_API_KEY || '5d001a13-f975-4baa-a8b6-e61fce1e8e98';
+const RINGG_AGENT_ID = process.env.RINGG_AGENT_ID_OUTBOUND || process.env.RINGG_AGENT_ID || '752c2ef5-086d-475a-87ca-c84708d4c49a';
 // RINGG_FROM_NUMBER: Default to provided number, can be overridden via environment variable
 const RINGG_FROM_NUMBER = process.env.RINGG_FROM_NUMBER || '+918035736726';
 
@@ -69,12 +69,12 @@ export async function initiateOutboundCall(params: OutboundCallParams): Promise<
   } else {
     // If no from_number is available, use the default
     requestBody.from_number = RINGG_FROM_NUMBER;
-  }
+    }
 
   // Only include custom_args_values if provided and not empty
   if (params.custom_args_values && Object.keys(params.custom_args_values).length > 0) {
     requestBody.custom_args_values = params.custom_args_values;
-  }
+    }
 
   // Only include call_config if provided
   if (params.call_config) {
@@ -85,26 +85,26 @@ export async function initiateOutboundCall(params: OutboundCallParams): Promise<
     console.log('Ringg AI API Request:', {
       url: `${RINGG_API_BASE_URL}/calling/outbound/individual`,
       body: requestBody,
-      headers: {
+        headers: {
         'X-API-KEY': RINGG_API_KEY.substring(0, 10) + '...', // Log partial key for security
-        'Content-Type': 'application/json'
-      }
-    });
-
+          'Content-Type': 'application/json'
+        }
+      });
+      
     const response = await axios.post<OutboundCallResponse>(
       `${RINGG_API_BASE_URL}/calling/outbound/individual`,
       requestBody,
       {
         headers: {
           'X-API-KEY': RINGG_API_KEY,
-          'Content-Type': 'application/json'
+            'Content-Type': 'application/json'
+          }
         }
-      }
-    );
-
+      );
+      
     console.log('Ringg AI API Response:', response.data);
     return response.data;
-  } catch (error: any) {
+    } catch (error: any) {
     if (error.response) {
       // API returned an error response
       const errorData = error.response.data;

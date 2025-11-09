@@ -21,7 +21,7 @@ export const authenticate = (
     id: 'guest',
     email: 'guest@homemates.com',
     builderId: 'guest'
-  };
-  next();
+    };
+    next();
 };
 
